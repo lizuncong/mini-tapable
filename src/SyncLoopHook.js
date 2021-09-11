@@ -46,26 +46,58 @@ class MySyncLoopHook{
 /**
  * 用法
  * **/
-const testhook = new SyncLoopHook(['compilation'])
-let count = 3;
-testhook.tap('plugin1', (compilation) => {
-  console.log('plugin1', count)
-  compilation.sum = compilation.sum + 1
-})
+// const testhook = new SyncLoopHook(['compilation'])
+// let count = 3;
+// testhook.tap('plugin1', (compilation) => {
+//   console.log('plugin1', count)
+//   compilation.sum = compilation.sum + 1
+// })
+//
+// testhook.tap('plugin2', (compilation) => {
+//   console.log('plugin2', count)
+//   compilation.sum = compilation.sum + 2
+//   count--;
+//   if(count < 1) return undefined;
+//   return null; // 返回了非undefined的值，因此hook执行到这里又会从第一个插件开始重新执行
+// })
+//
+// testhook.tap('plugin3', (compilation) => {
+//   console.log('plugin3')
+//   compilation.sum = compilation.sum + 3
+// })
+//
+// const compilation = { sum: 0 }
+// testhook.call(compilation)
+// console.log('执行完成', compilation)
 
-testhook.tap('plugin2', (compilation) => {
-  console.log('plugin2', count)
-  compilation.sum = compilation.sum + 2
-  count--;
-  if(count < 1) return undefined;
-  return null; // 返回了非undefined的值，因此hook执行到这里又会从第一个插件开始重新执行
-})
 
-testhook.tap('plugin3', (compilation) => {
-  console.log('plugin3')
-  compilation.sum = compilation.sum + 3
-})
-
+/**
+ * 执行时间比较，平均50倍的差距。。。。
+ * **/
+const hook = new SyncLoopHook(['compilation'])
+const myHook = new MySyncLoopHook(['compilation'])
 const compilation = { sum: 0 }
-testhook.call(compilation)
-console.log('执行完成', compilation)
+const myCompilation = { sum: 0}
+/**
+ * 批量注册插件
+ * **/
+for(let i = 0; i < 1000; i++){
+  hook.tap(`plugin${i}`, (compilation) => {
+    compilation.sum = compilation.sum + i
+  })
+
+  myHook.tap(`plugin${i}`, (compilation) => {
+    compilation.sum = compilation.sum + i
+  })
+}
+
+console.time('tapable')
+hook.call(compilation)
+console.timeEnd('tapable')
+
+console.time('my')
+myHook.call(myCompilation)
+console.timeEnd('my')
+
+console.log(compilation)
+console.log(myCompilation)
