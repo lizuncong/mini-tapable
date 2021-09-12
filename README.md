@@ -933,3 +933,76 @@ function anonymous(compilation, name) {
 
 
 ```
+
+##### AsyncSeriesHook
+- 可以通过hook.tap，hook.tapAsync，hook.tapPromise注册插件，通过hook.callAsync(...args, finalCb)，hook.promise触发插件执行。不能通过hook.call触发插件执行
+- 所有钩子都会异步串行执行
+    + 通过testhook.tap(pluginName, (compilation, name) => {})注册的插件，插件执行完，才能继续执行下一个插件
+    + 通过testhook.tapAsync(pluginName, (compilation,name, cb) => {})注册的插件，插件执行完并且调用cb，才会继续执行下一个插件
+        + 如果没有调用cb，则不会继续执行下一个插件，最终的testhook.callAsync(compilation, 'mike', finalCb)里面的finalCb也不会执行，testhook.promise的状态也不会改变
+        + 如果调用了不带参数的cb()，则继续执行下一个插件
+        + 如果调用了cb('cb_err')，并且传递了非undefined的值，那么tapable将此行为当作是插件抛出了错误，不会继续执行后续的插件，直接退出并执行
+       testhook.callAsync(compilation, err => {})中的finalCb，err值为'cb_err'。如果是通过testhook.promise触发的插件执行，那么testhook.promise的状态
+       将改成reject，并且将错误传递给error
+    + 如果是通过testhook.promise(pluginName,(compilation, name) => { return new Promise})注册的插件，那么插件一定要返回一个promise，这里称为pro，不然会报错。
+     执行插件，并且根据返回的promise的状态进行判断
+        + 如果插件pro的状态没有改变，既没有调用resovle，也没有调用reject，那么不会执行后续的插件，也不会执行testhook.callAsync最终的回调，也不会改变testhook.promise的状态
+        + 如果pro的状态变成resolve，即插件调用了resolve()，那么继续执行下一个插件
+        + 如果pro的状态变为reject，即插件调用了reject('an error')，那么插件会提前退出，并且将错误传递给testhook.callAsync的最终回调，或者testhook.promise
+       的状态改为reject，并接收'an error'错误
+     + 总结：tapAsync的cb如果带了参数或者hook.tapPromise调用了reject，则直接传给hook.callAsync的最终回调函数，或者传给hook.promise的reject
+     
+用法：
+```javascript
+
+const testhook = new AsyncSeriesHook(['compilation', 'name'])
+
+testhook.tap('plugin1', (compilation, name) => {
+  console.log('plugin1', name)
+  compilation.sum = compilation.sum + 1
+  const start = new Date().getTime();
+  // throw Error('plugin1抛出的error')
+  while(new Date().getTime() - start < 5000){}
+  return 'hah'; // 返回值没什么意义
+})
+
+testhook.tapPromise('plugin2', (compilation, name) => {
+  return new Promise((resolve, reject) => {
+    console.log('plugin2', name)
+    setTimeout(() => {
+      console.log('plugin2状态改变')
+      resolve('success')
+      // reject('plugin2.error') //如果调用的是reject，则不会继续走后面的插件，reject的值会被传递给hook.callAsync的回调函数
+    }, 2000)
+    compilation.sum = compilation.sum + 1
+  })
+})
+
+
+testhook.tapAsync('plugin3', (compilation, name,cb) => {
+  console.log('plugin3', name, cb)
+  compilation.sum = compilation.sum + 4
+  setTimeout(() => {
+    console.log('plugin3回调')
+    // cb();
+    cb('plugin3.error', 'plugin3.error2') // 只有第一个参数会传给最终的回调函数
+  }, 3000)
+})
+
+
+
+const compilation = { sum: 0 }
+// 第一种方式：通过hook.callAsync调用
+testhook.callAsync(compilation, 'mike', function(...args){
+  console.log('最终回调', args)
+})
+
+// 第二种方式：通过testhook.promise触发插件执行
+// testhook.promise(compilation, 'name').then(res => {
+//   console.log('最终回调', res)
+// }, err => {
+//   console.log('有错误了。。。', err)
+// })
+console.log('执行完成', compilation)
+```
+
