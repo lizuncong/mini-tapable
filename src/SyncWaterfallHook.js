@@ -45,6 +45,7 @@ testhook.tap('plugin1', (compilation, name) => {
 testhook.tap('plugin2', (compilation, name) => {
   console.log('plugin2..',name)
   compilation.sum = compilation.sum + 2
+  // throw Error('plugin2抛出一个错误')
   // return undefined // 如果返回undefined，那么会将plugin1的返回值传递给plugin3的参数
   return { name: 'plugin2'}; // 将null传递给plugin3
 })
@@ -52,7 +53,7 @@ testhook.tap('plugin2', (compilation, name) => {
 testhook.tap('plugin3', (compilation, name) => {
   console.log('plugin3', compilation, name)
   compilation.sum = compilation.sum + 3
-  // return { test: ''}
+  return { test: ''}
 })
 
 const compilation = { sum: 0 }
@@ -60,8 +61,8 @@ const compilation = { sum: 0 }
 // testhook.call(compilation)
 
 // 第二种触发方式：通过callAsync
-testhook.callAsync(compilation, (...args) => {
-  console.log('最终回调完成', ...args)
+testhook.callAsync(compilation, (error, result) => {
+  console.log('最终回调完成', error, result)
 })
 // 第三种触发方式：通过promise
 // testhook.promise(compilation).then(res => {

@@ -74,9 +74,33 @@ register拦截器。
 #### tapable分类
 tapable hook 类型可以分为 `SyncHook(同步钩子)`、`AsyncHook(异步钩子)`，异步又分为 `并行` 和 `串行`。
 
-- 同步钩子，名字以`Sync`开头的，只能通过hook.tap注册插件。但是都可以通过hook.call，hook.callAsync以及hook.promise触发插件执行
-    + SyncHook以及SyncLoopHook的hook.callAsync回调函数并不会接收参数，hook.promise的resolve也不会抛出参数
-    + SyncBailHook以及SyncWaterfallHook的hook.callAsync回调函数接收最后一个有返回值的插件的返回值作为参数，promise也是如此
+- 约定.hook.callAsync(...args, finalCb)。finalCb = () => {}
+- 同步钩子，名字以`Sync`开头的，**只能通过hook.tap注册插件**。但是都可以通过hook.call，hook.callAsync以及hook.promise触发插件执行
+    + SyncHook插件的返回值没有意义。
+        + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃
+        + 通过hook.callAsync(...args, err => {})触发插件执行，如果插件内部发生错误，不会继续执行后续的插件，执行最终的回调函数，err接收错误的值
+        + 通过hook.promise(...args).then(res => {}, err => {})。res不会接收任何值。如果插件内部发生错误，则不会执行后续的插件，直接改变
+        hook.promise的状态，err接收插件抛出的错误
+    + SyncLoopHook 插件的返回值有意义。插件如果有返回非undefined的值，则hook会从第一个插件开始重新执行。如果插件返回undefined，则继续执行下一个插件
+        + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃
+        + 通过hook.callAsync(...args, err => {})触发插件执行，如果插件内部发生错误，不会继续执行后续的插件，执行最终的回调函数，err接收错误的值
+        + 通过hook.promise(...args).then(res => {}, err => {})。res不会接收任何值。如果插件内部发生错误，则不会执行后续的插件，直接改变
+        hook.promise的状态，err接收插件抛出的错误
+    + SyncBailHook。插件的返回值有意义，如果插件返回了非undefined的值比如result，那么插件提前退出，不会继续执行后续插件。执行最终的回调函数。如果插件
+    返回undefined，则继续执行后续的插件
+        + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃。插件的返回值也接受不到
+        + 通过hook.callAsync(...args, (err, result) => {})触发插件执行，如果插件有返回值，那么result将接收到插件的返回值。如果插件内部发生错误，
+        那么err将接收到插件抛出的错误
+        + 通过hook.promise(...args).then(res => {}, err => {})触发插件执行，如果插件有返回值，则hook.promise状态改为resolve，res接收插件的返回值。
+        如果插件内部发生错误，则hook.promise状态改为reject，err接收到错误值
+        
+    + SyncWaterfallHook。插件的返回值有意义，插件的返回值往下一个插件传递，直到传到最终的回调函数。
+        + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃。插件的返回值也接受不到
+        + 通过hook.callAsync(compilation, (error, result) => {console.log('最终回调完成', error, result)})触发插件执行。
+        插件的返回值会一直往后面传递，直到传给最终的回调函数，此时error为null，result接收插件的返回值。如果插件内部发生错误，则插件提前退出，不会继续往后面执行，执行最终的回调函数，error接收到错误的值。
+        + 通过hook.promise(...args).then(res => {}, err => {})。res接收插件的返回值。如果插件内部发生错误，则插件提前退出，不会继续执行后续的插件，
+        执行最终的回调函数，此时hook.promise的状态改变为reject，err接收插件抛出的内部错误。
+
 
 - Basic。目前Basic类型的Hook只有SyncHook。这种Hook的特点是不关心插件回调函数的返回值，并且串行执行插件回调函数。
 - Bail。名字带有Bail的都是保险式Hook，允许中断插件回调函数的执行，只要插件监听函数中有返回值(不为undefined)，则不执行后面的插件回调函数
