@@ -56,19 +56,19 @@ hook.tap('plugin3', (compilation) => {
 
 const compilation = { sum: 0 }
 // 第一种触发方式：通过call触发
-hook.call(compilation)
+// hook.call(compilation)
 
 // 第二种触发方式：通过callAsync
-hook.callAsync(compilation, (error , result) => {
-  // 如果插件内部发生错误，则不会执行后续的插件，并将错误赋值给error
-  console.log('最终回调完成..', error, result)
-})
-// 第三种触发方式：通过promise
-// hook.promise(compilation).then(res => {
-//   console.log('最终回调...',res)
-// }, err => {
-//   console.log('出错了。。。', err)
+// hook.callAsync(compilation, (error , result) => {
+//   // 如果插件内部发生错误，则不会执行后续的插件，并将错误赋值给error
+//   console.log('最终回调完成..', error, result)
 // })
+// 第三种触发方式：通过promise
+hook.promise(compilation).then(res => {
+   console.log('最终回调...',res)
+}, err => {
+   console.log('出错了。。。', err)
+})
 
 console.log('执行完成', compilation)
 

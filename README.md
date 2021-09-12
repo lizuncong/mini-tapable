@@ -560,17 +560,209 @@ function anonymous3(compilation) {
     
     
     
-- SyncBailHook。插件的返回值有意义，如果插件返回了非undefined的值比如result，那么插件提前退出，不会继续执行后续插件。执行最终的回调函数。如果插件
+##### SyncBailHook
+插件的返回值有意义，如果插件返回了非undefined的值比如result，那么插件提前退出，不会继续执行后续插件。执行最终的回调函数。如果插件
     返回undefined，则继续执行后续的插件
-    + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃。插件的返回值也接受不到
-    + 通过hook.callAsync(...args, (err, result) => {})触发插件执行，如果插件有返回值，那么result将接收到插件的返回值。如果插件内部发生错误，
+    - 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃。插件的返回值也接受不到
+    - 通过hook.callAsync(...args, (err, result) => {})触发插件执行，如果插件有返回值，那么result将接收到插件的返回值。如果插件内部发生错误，
     那么err将接收到插件抛出的错误
-    + 通过hook.promise(...args).then(res => {}, err => {})触发插件执行，如果插件有返回值，则hook.promise状态改为resolve，res接收插件的返回值。
+    - 通过hook.promise(...args).then(res => {}, err => {})触发插件执行，如果插件有返回值，则hook.promise状态改为resolve，res接收插件的返回值。
     如果插件内部发生错误，则hook.promise状态改为reject，err接收到错误值
-        
-+ SyncWaterfallHook。插件的返回值有意义，插件的返回值往下一个插件传递，直到传到最终的回调函数。
-        + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃。插件的返回值也接受不到
-        + 通过hook.callAsync(compilation, (error, result) => {console.log('最终回调完成', error, result)})触发插件执行。
-        插件的返回值会一直往后面传递，直到传给最终的回调函数，此时error为null，result接收插件的返回值。如果插件内部发生错误，则插件提前退出，不会继续往后面执行，执行最终的回调函数，error接收到错误的值。
-        + 通过hook.promise(...args).then(res => {}, err => {})。res接收插件的返回值。如果插件内部发生错误，则插件提前退出，不会继续执行后续的插件，
-        执行最终的回调函数，此时hook.promise的状态改变为reject，err接收插件抛出的内部错误。
+
+用法：
+```javascript
+const hook = new SyncBailHook(['compilation'])
+hook.tap('plugin1', (compilation) => {
+  console.log('plugin1')
+  compilation.sum = compilation.sum + 1
+})
+
+hook.tap('plugin2', (compilation) => {
+  console.log('plugin2')
+  // throw Error('plugin2 抛出错误..')
+  compilation.sum = compilation.sum + 2
+  return 'haha'; // 除了返回undefined以外，任何值都会中断插件继续往后执行
+})
+
+hook.tap('plugin3', (compilation) => {
+  console.log('plugin3')
+  compilation.sum = compilation.sum + 3
+})
+
+const compilation = { sum: 0 }
+// 第一种触发方式：通过call触发
+hook.call(compilation)
+// hook.call经过HookCodeFactory.js生成后的代码
+function anonymous(compilation) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  var _fn0 = _x[0];
+  var _result0 = _fn0(compilation);
+  if(_result0 !== undefined) {
+    return _result0;
+    ;
+  } else {
+    var _fn1 = _x[1];
+    var _result1 = _fn1(compilation);
+    if(_result1 !== undefined) {
+      return _result1;
+      ;
+    } else {
+      var _fn2 = _x[2];
+      var _result2 = _fn2(compilation);
+      if(_result2 !== undefined) {
+        return _result2;
+        ;
+      } else {
+      }
+    }
+  }
+}
+
+
+// 第二种触发方式：通过callAsync
+hook.callAsync(compilation, (error , result) => {
+  // 如果插件内部发生错误，则不会执行后续的插件，并将错误赋值给error
+  console.log('最终回调完成..', error, result)
+})
+// hook.callAsync经过HookCodeFactory.js生成后的代码
+function anonymous(compilation, _callback) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  var _fn0 = _x[0];
+  var _hasError0 = false;
+  try {
+    var _result0 = _fn0(compilation);
+  } catch(_err) {
+    _hasError0 = true;
+    _callback(_err);
+  }
+  if(!_hasError0) {
+    if(_result0 !== undefined) {
+      _callback(null, _result0);
+      ;
+    } else {
+      var _fn1 = _x[1];
+      var _hasError1 = false;
+      try {
+        var _result1 = _fn1(compilation);
+      } catch(_err) {
+        _hasError1 = true;
+        _callback(_err);
+      }
+      if(!_hasError1) {
+        if(_result1 !== undefined) {
+          _callback(null, _result1);
+          ;
+        } else {
+          var _fn2 = _x[2];
+          var _hasError2 = false;
+          try {
+            var _result2 = _fn2(compilation);
+          } catch(_err) {
+            _hasError2 = true;
+            _callback(_err);
+          }
+          if(!_hasError2) {
+            if(_result2 !== undefined) {
+              _callback(null, _result2);
+              ;
+            } else {
+              _callback();
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+// 第三种触发方式：通过promise
+hook.promise(compilation).then(res => {
+   console.log('最终回调...',res)
+}, err => {
+   console.log('出错了。。。', err)
+})
+
+console.log('执行完成', compilation)
+// hook.promise经过HookCodeFactory.js生成后的代码
+function anonymous(compilation) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  return new Promise((function(_resolve, _reject) {
+    var _sync = true;
+    function _error(_err) {
+      if(_sync)
+        _resolve(Promise.resolve().then((function() { throw _err; })));
+      else
+        _reject(_err);
+    };
+    var _fn0 = _x[0];
+    var _hasError0 = false;
+    try {
+      var _result0 = _fn0(compilation);
+    } catch(_err) {
+      _hasError0 = true;
+      _error(_err);
+    }
+    if(!_hasError0) {
+      if(_result0 !== undefined) {
+        _resolve(_result0);
+        ;
+      } else {
+        var _fn1 = _x[1];
+        var _hasError1 = false;
+        try {
+          var _result1 = _fn1(compilation);
+        } catch(_err) {
+          _hasError1 = true;
+          _error(_err);
+        }
+        if(!_hasError1) {
+          if(_result1 !== undefined) {
+            _resolve(_result1);
+            ;
+          } else {
+            var _fn2 = _x[2];
+            var _hasError2 = false;
+            try {
+              var _result2 = _fn2(compilation);
+            } catch(_err) {
+              _hasError2 = true;
+              _error(_err);
+            }
+            if(!_hasError2) {
+              if(_result2 !== undefined) {
+                _resolve(_result2);
+                ;
+              } else {
+                _resolve();
+              }
+            }
+          }
+        }
+      }
+    }
+    _sync = false;
+  }));
+}
+
+```
+
+
+##### SyncWaterfallHook
+插件的返回值有意义，插件的返回值往下一个插件传递，直到传到最终的回调函数。
+    - 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃。插件的返回值也接受不到
+    - 通过hook.callAsync(compilation, (error, result) => {console.log('最终回调完成', error, result)})触发插件执行。
+    插件的返回值会一直往后面传递，直到传给最终的回调函数，此时error为null，result接收插件的返回值。如果插件内部发生错误，则插件提前退出，不会继续往后面执行，执行最终的回调函数，error接收到错误的值。
+    - 通过hook.promise(...args).then(res => {}, err => {})。res接收插件的返回值。如果插件内部发生错误，则插件提前退出，不会继续执行后续的插件，
+    执行最终的回调函数，此时hook.promise的状态改变为reject，err接收插件抛出的内部错误。
+
+用法：
+```javascript
+
+```
