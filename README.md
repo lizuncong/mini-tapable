@@ -76,6 +76,12 @@ tapable hook 类型可以分为 `SyncHook(同步钩子)`、`AsyncHook(异步钩�
 
 - 约定.hook.callAsync(...args, finalCb)。finalCb = () => {}
 - 同步钩子，名字以`Sync`开头的，**只能通过hook.tap注册插件**。但是都可以通过hook.call，hook.callAsync以及hook.promise触发插件执行
+- Basic。目前Basic类型的Hook只有SyncHook。这种Hook的特点是不关心插件回调函数的返回值，并且串行执行插件回调函数。
+- Bail。名字带有Bail的都是保险式Hook，允许中断插件回调函数的执行，只要插件监听函数中有返回值(不为undefined)，则不执行后面的插件回调函数
+- Waterfall。名字带有Waterfall的都是瀑布式Hook，串行执行，这种Hook的特点是，上一个插件回调函数的返回值会传递给下一个插件回调函数的参数
+- Loop。名字带有Loop的都是循环类型的Hook。这种Hook的特点是，只要插件回调函数返回true，则hook会从第一个插件回调函数开始重新执行，直到所有的插件回调函数都返回undefined
+
+- 各类型hook用法简介
     + SyncHook插件的返回值没有意义。
         + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃
         + 通过hook.callAsync(...args, err => {})触发插件执行，如果插件内部发生错误，不会继续执行后续的插件，执行最终的回调函数，err接收错误的值
@@ -100,13 +106,6 @@ tapable hook 类型可以分为 `SyncHook(同步钩子)`、`AsyncHook(异步钩�
         插件的返回值会一直往后面传递，直到传给最终的回调函数，此时error为null，result接收插件的返回值。如果插件内部发生错误，则插件提前退出，不会继续往后面执行，执行最终的回调函数，error接收到错误的值。
         + 通过hook.promise(...args).then(res => {}, err => {})。res接收插件的返回值。如果插件内部发生错误，则插件提前退出，不会继续执行后续的插件，
         执行最终的回调函数，此时hook.promise的状态改变为reject，err接收插件抛出的内部错误。
-
-
-- Basic。目前Basic类型的Hook只有SyncHook。这种Hook的特点是不关心插件回调函数的返回值，并且串行执行插件回调函数。
-- Bail。名字带有Bail的都是保险式Hook，允许中断插件回调函数的执行，只要插件监听函数中有返回值(不为undefined)，则不执行后面的插件回调函数
-- Waterfall。名字带有Waterfall的都是瀑布式Hook，串行执行，这种Hook的特点是，上一个插件回调函数的返回值会传递给下一个插件回调函数的参数
-- Loop。名字带有Loop的都是循环类型的Hook。这种Hook的特点是，只要插件回调函数返回true，则hook会从第一个插件回调函数开始重新执行，直到所有的插件回调函数都返回undefined
-    
 
 #### HookCodeFactory
 tapable在执行插件回调函数时做了一些优化。tapable在运行时动态生成执行插件回调函数的方法，这部分代码在`HookCodeFactory.js`文件中。总之，tapable会根据
