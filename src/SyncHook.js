@@ -54,15 +54,15 @@ const compilation = { sum: 0 }
 // testhook.call(compilation)
 
 // // 第二种触发方式：通过callAsync
-testhook.callAsync(compilation, (...args) => {
-  console.log('最终回调完成..', ...args)
-})
-// 第三种触发方式：通过promise
-// testhook.promise(compilation).then(res => {
-//   console.log('最终回调...',res)
-// }, err => {
-//   console.log('出错了。。。', err)
+// testhook.callAsync(compilation, (...args) => {
+//   console.log('最终回调完成..', ...args)
 // })
+// 第三种触发方式：通过promise
+testhook.promise(compilation).then(res => {
+  console.log('最终回调...',res)
+}, err => {
+  console.log('出错了。。。', err)
+})
 console.log('执行完成', compilation)
 
 //
