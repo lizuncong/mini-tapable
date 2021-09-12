@@ -59,7 +59,7 @@ testhook.tap('plugin2', (compilation) => {
   console.log('plugin2', count)
   compilation.sum = compilation.sum + 2
   count--;
-  // throw Error('plugin2 抛出错误')
+  throw Error('plugin2 抛出错误')
   if(count < 1) return undefined;
   return null; // 返回了非undefined的值，因此hook执行到这里又会从第一个插件开始重新执行
 })

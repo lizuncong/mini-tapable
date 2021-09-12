@@ -355,11 +355,211 @@ function anonymous3(compilation) {
 ```
 
 
-- SyncLoopHook 插件的返回值有意义。插件如果有返回非undefined的值，则hook会从第一个插件开始重新执行。如果插件返回undefined，则继续执行下一个插件
-    + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃
-    + 通过hook.callAsync(...args, err => {})触发插件执行，如果插件内部发生错误，不会继续执行后续的插件，执行最终的回调函数，err接收错误的值
-    + 通过hook.promise(...args).then(res => {}, err => {})。res不会接收任何值。如果插件内部发生错误，则不会执行后续的插件，直接改变
+##### SyncLoopHook
+插件的返回值有意义。插件如果有返回非undefined的值，则hook会从第一个插件开始重新执行。如果插件返回undefined，则继续执行下一个插件
+    - 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃
+    - 通过hook.callAsync(...args, err => {})触发插件执行，如果插件内部发生错误，不会继续执行后续的插件，执行最终的回调函数，err接收错误的值
+    - 通过hook.promise(...args).then(res => {}, err => {})。res不会接收任何值。如果插件内部发生错误，则不会执行后续的插件，直接改变
     hook.promise的状态，err接收插件抛出的错误
+    
+用法：
+```javascript
+const testhook = new SyncLoopHook(['compilation'])
+let count = 3;
+testhook.tap('plugin1', (compilation) => {
+  console.log('plugin1', count)
+  compilation.sum = compilation.sum + 1
+})
+
+testhook.tap('plugin2', (compilation) => {
+  console.log('plugin2', count)
+  compilation.sum = compilation.sum + 2
+  count--;
+  throw Error('plugin2 抛出错误')
+  if(count < 1) return undefined;
+  return null; // 返回了非undefined的值，因此hook执行到这里又会从第一个插件开始重新执行
+})
+
+testhook.tap('plugin3', (compilation) => {
+  console.log('plugin3')
+  compilation.sum = compilation.sum + 3
+  return
+})
+
+const compilation = { sum: 0 }
+// 第一种触发方式：通过call触发
+testhook.call(compilation)
+// testhook.call经过HookCodeFactory.js生成后的源码：
+function anonymous1(compilation) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  var _loop;
+  do {
+    _loop = false;
+    var _fn0 = _x[0];
+    var _result0 = _fn0(compilation);
+    if(_result0 !== undefined) {
+      _loop = true;
+    } else {
+      var _fn1 = _x[1];
+      var _result1 = _fn1(compilation);
+      if(_result1 !== undefined) {
+        _loop = true;
+      } else {
+        var _fn2 = _x[2];
+        var _result2 = _fn2(compilation);
+        if(_result2 !== undefined) {
+          _loop = true;
+        } else {
+          if(!_loop) {
+          }
+        }
+      }
+    }
+  } while(_loop);
+}
+
+
+// 第二种触发方式：通过callAsync
+testhook.callAsync(compilation, (error) => {
+   console.log('最终回调完成..', error)
+})
+// testhook.callAsync经过HookCodeFactory.js生成后的源码：
+function anonymous2(compilation, _callback) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  var _loop;
+  do {
+    _loop = false;
+    var _fn0 = _x[0];
+    var _hasError0 = false;
+    try {
+      var _result0 = _fn0(compilation);
+    } catch(_err) {
+      _hasError0 = true;
+      _callback(_err);
+    }
+    if(!_hasError0) {
+      if(_result0 !== undefined) {
+        _loop = true;
+      } else {
+        var _fn1 = _x[1];
+        var _hasError1 = false;
+        try {
+          var _result1 = _fn1(compilation);
+        } catch(_err) {
+          _hasError1 = true;
+          _callback(_err);
+        }
+        if(!_hasError1) {
+          if(_result1 !== undefined) {
+            _loop = true;
+          } else {
+            var _fn2 = _x[2];
+            var _hasError2 = false;
+            try {
+              var _result2 = _fn2(compilation);
+            } catch(_err) {
+              _hasError2 = true;
+              _callback(_err);
+            }
+            if(!_hasError2) {
+              if(_result2 !== undefined) {
+                _loop = true;
+              } else {
+                if(!_loop) {
+                  _callback();
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } while(_loop);
+}
+
+// 第三种触发方式：通过promise
+testhook.promise(compilation).then(res => {
+   console.log('最终回调...',res)
+}, err => {
+   console.log('出错了...', err)
+})
+console.log('执行完成', compilation)
+
+// testhook.promise经过HookCodeFactory.js生成后的源码：
+function anonymous3(compilation) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  return new Promise((function(_resolve, _reject) {
+    var _sync = true;
+    function _error(_err) {
+      if(_sync)
+        _resolve(Promise.resolve().then((function() { throw _err; }))); // 存疑？为什么不直接_reject(_err)
+      else
+        _reject(_err);
+    };
+    var _loop;
+    do {
+      _loop = false;
+      var _fn0 = _x[0];
+      var _hasError0 = false;
+      try {
+        var _result0 = _fn0(compilation);
+      } catch(_err) {
+        _hasError0 = true;
+        _error(_err);
+      }
+      if(!_hasError0) {
+        if(_result0 !== undefined) {
+          _loop = true;
+        } else {
+          var _fn1 = _x[1];
+          var _hasError1 = false;
+          try {
+            var _result1 = _fn1(compilation);
+          } catch(_err) {
+            _hasError1 = true;
+            _error(_err);
+          }
+          if(!_hasError1) {
+            if(_result1 !== undefined) {
+              _loop = true;
+            } else {
+              var _fn2 = _x[2];
+              var _hasError2 = false;
+              try {
+                var _result2 = _fn2(compilation);
+              } catch(_err) {
+                _hasError2 = true;
+                _error(_err);
+              }
+              if(!_hasError2) {
+                if(_result2 !== undefined) {
+                  _loop = true;
+                } else {
+                  if(!_loop) {
+                    _resolve();
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } while(_loop);
+    _sync = false;
+  }));
+}
+
+```
+    
+    
+    
+    
 - SyncBailHook。插件的返回值有意义，如果插件返回了非undefined的值比如result，那么插件提前退出，不会继续执行后续插件。执行最终的回调函数。如果插件
     返回undefined，则继续执行后续的插件
     + 通过hook.call(...args)触发插件执行，捕获不了插件内部抛出的错误，程序崩溃。插件的返回值也接受不到
