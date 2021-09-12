@@ -764,5 +764,172 @@ function anonymous(compilation) {
 
 用法：
 ```javascript
+const testhook = new SyncWaterfallHook(['compilation', 'name'])
+testhook.tap('plugin1', (compilation, name) => {
+  console.log('plugin1', name)
+  compilation.sum = compilation.sum + 1
+  return compilation
+})
+
+testhook.tap('plugin2', (compilation, name) => {
+  console.log('plugin2..',name)
+  compilation.sum = compilation.sum + 2
+  // throw Error('plugin2抛出一个错误')
+  // return undefined // 如果返回undefined，那么会将plugin1的返回值传递给plugin3的参数
+  return { name: 'plugin2'}; // 将null传递给plugin3
+})
+
+testhook.tap('plugin3', (compilation, name) => {
+  console.log('plugin3', compilation, name)
+  compilation.sum = compilation.sum + 3
+  return { test: ''}
+})
+
+const compilation = { sum: 0 }
+// 第一种触发方式：通过call触发
+testhook.call(compilation, 'mike')
+// testhook.call(compilation, 'mike')经过HookCodeFactory.js生成的源码如下：
+function anonymous(compilation, name) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  var _fn0 = _x[0];
+  var _result0 = _fn0(compilation, name);
+  if(_result0 !== undefined) {
+    compilation = _result0;
+  }
+  var _fn1 = _x[1];
+  var _result1 = _fn1(compilation, name);
+  if(_result1 !== undefined) {
+    compilation = _result1;
+  }
+  var _fn2 = _x[2];
+  var _result2 = _fn2(compilation, name);
+  if(_result2 !== undefined) {
+    compilation = _result2;
+  }
+  return compilation;
+
+}
+
+
+
+// 第二种触发方式：通过callAsync
+testhook.callAsync(compilation, 'mike', (error, result) => {
+   console.log('最终回调完成', error, result)
+})
+// testhook.callAsync经过HookCodeFactory.js生成的源码如下：
+function anonymous(compilation, name, _callback) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  var _fn0 = _x[0];
+  var _hasError0 = false;
+  try {
+    var _result0 = _fn0(compilation, name);
+  } catch(_err) {
+    _hasError0 = true;
+    _callback(_err);
+  }
+  if(!_hasError0) {
+    if(_result0 !== undefined) {
+      compilation = _result0;
+    }
+    var _fn1 = _x[1];
+    var _hasError1 = false;
+    try {
+      var _result1 = _fn1(compilation, name);
+    } catch(_err) {
+      _hasError1 = true;
+      _callback(_err);
+    }
+    if(!_hasError1) {
+      if(_result1 !== undefined) {
+        compilation = _result1;
+      }
+      var _fn2 = _x[2];
+      var _hasError2 = false;
+      try {
+        var _result2 = _fn2(compilation, name);
+      } catch(_err) {
+        _hasError2 = true;
+        _callback(_err);
+      }
+      if(!_hasError2) {
+        if(_result2 !== undefined) {
+          compilation = _result2;
+        }
+        _callback(null, compilation);
+      }
+    }
+  }
+
+}
+
+// 第三种触发方式：通过promise
+testhook.promise(compilation, 'mike').then(res => {
+   console.log('最终回调...',res)
+ }, err => {
+  console.log('出错了...', err)
+})
+console.log('执行完成', compilation)
+// testhook.promise经过HookCodeFactory.js生成的源码如下：
+function anonymous(compilation, name) {
+  "use strict";
+  var _context;
+  var _x = this._x;
+  return new Promise((function(_resolve, _reject) {
+    var _sync = true;
+    function _error(_err) {
+      if(_sync)
+        _resolve(Promise.resolve().then((function() { throw _err; })));
+      else
+        _reject(_err);
+    };
+    var _fn0 = _x[0];
+    var _hasError0 = false;
+    try {
+      var _result0 = _fn0(compilation, name);
+    } catch(_err) {
+      _hasError0 = true;
+      _error(_err);
+    }
+    if(!_hasError0) {
+      if(_result0 !== undefined) {
+        compilation = _result0;
+      }
+      var _fn1 = _x[1];
+      var _hasError1 = false;
+      try {
+        var _result1 = _fn1(compilation, name);
+      } catch(_err) {
+        _hasError1 = true;
+        _error(_err);
+      }
+      if(!_hasError1) {
+        if(_result1 !== undefined) {
+          compilation = _result1;
+        }
+        var _fn2 = _x[2];
+        var _hasError2 = false;
+        try {
+          var _result2 = _fn2(compilation, name);
+        } catch(_err) {
+          _hasError2 = true;
+          _error(_err);
+        }
+        if(!_hasError2) {
+          if(_result2 !== undefined) {
+            compilation = _result2;
+          }
+          _resolve(compilation);
+        }
+      }
+    }
+    _sync = false;
+  }));
+
+}
+
 
 ```

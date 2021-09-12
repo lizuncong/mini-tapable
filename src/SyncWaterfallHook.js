@@ -35,7 +35,7 @@ class MySyncWaterfallHook{
 /**
  * 用法
  * **/
-const testhook = new SyncWaterfallHook(['compilation'])
+const testhook = new SyncWaterfallHook(['compilation', 'name'])
 testhook.tap('plugin1', (compilation, name) => {
   console.log('plugin1', name)
   compilation.sum = compilation.sum + 1
@@ -58,18 +58,18 @@ testhook.tap('plugin3', (compilation, name) => {
 
 const compilation = { sum: 0 }
 // 第一种触发方式：通过call触发
-// testhook.call(compilation)
+// testhook.call(compilation, 'mike')
 
 // 第二种触发方式：通过callAsync
-testhook.callAsync(compilation, (error, result) => {
-  console.log('最终回调完成', error, result)
-})
-// 第三种触发方式：通过promise
-// testhook.promise(compilation).then(res => {
-//   console.log('最终回调...',res)
-// }, err => {
-//
+// testhook.callAsync(compilation, 'mike', (error, result) => {
+//    console.log('最终回调完成', error, result)
 // })
+// 第三种触发方式：通过promise
+testhook.promise(compilation, 'mike').then(res => {
+   console.log('最终回调...',res)
+ }, err => {
+  console.log('出错了...', err)
+})
 console.log('执行完成', compilation)
 
 
