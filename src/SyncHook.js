@@ -26,7 +26,9 @@ const testhook = new SyncHook(['compilation'])
 testhook.tap('plugin1', (compilation, name) => {
   console.log('plugin1', name)
   compilation.sum = compilation.sum + 1
-  return compilation
+  // const start = new Date().getTime();
+  // while(new Date().getTime() - start < 5000){}
+  // return compilation
 })
 
 testhook.tap('plugin2', (compilation, name) => {
