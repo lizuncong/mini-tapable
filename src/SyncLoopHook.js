@@ -3,7 +3,7 @@ const { SyncLoopHook } = require('tapable')
 /**
  * 特点：
  *  1.同步串行执行所有的插件回调函数
- *  2.只能通过hook.tap注册插件，通过hook.call触发插件执行
+ *  2.只能通过hook.tap注册插件，可以通过hook.call，hook.callAsync，hook.promise触发插件执行。hook.callAsync的回调函数以及hook.promise的then没有参数
  *  3.如果一个插件返回了不是undefined的值，那么hook将会从第一个插件开始重新执行
  * **/
 class MySyncLoopHook{
@@ -46,58 +46,71 @@ class MySyncLoopHook{
 /**
  * 用法
  * **/
-// const testhook = new SyncLoopHook(['compilation'])
-// let count = 3;
-// testhook.tap('plugin1', (compilation) => {
-//   console.log('plugin1', count)
-//   compilation.sum = compilation.sum + 1
-// })
-//
-// testhook.tap('plugin2', (compilation) => {
-//   console.log('plugin2', count)
-//   compilation.sum = compilation.sum + 2
-//   count--;
-//   if(count < 1) return undefined;
-//   return null; // 返回了非undefined的值，因此hook执行到这里又会从第一个插件开始重新执行
-// })
-//
-// testhook.tap('plugin3', (compilation) => {
-//   console.log('plugin3')
-//   compilation.sum = compilation.sum + 3
-// })
-//
-// const compilation = { sum: 0 }
+const testhook = new SyncLoopHook(['compilation'])
+let count = 3;
+testhook.tap('plugin1', (compilation) => {
+  console.log('plugin1', count)
+  compilation.sum = compilation.sum + 1
+})
+
+testhook.tap('plugin2', (compilation) => {
+  console.log('plugin2', count)
+  compilation.sum = compilation.sum + 2
+  count--;
+  if(count < 1) return undefined;
+  return null; // 返回了非undefined的值，因此hook执行到这里又会从第一个插件开始重新执行
+})
+
+testhook.tap('plugin3', (compilation) => {
+  console.log('plugin3')
+  compilation.sum = compilation.sum + 3
+  return
+})
+
+const compilation = { sum: 0 }
+// 第一种触发方式：通过call触发
 // testhook.call(compilation)
-// console.log('执行完成', compilation)
+
+// 第二种触发方式：通过callAsync
+// testhook.callAsync(compilation, (...args) => {
+//   console.log('最终回调完成..', ...args)
+// })
+// 第三种触发方式：通过promise
+testhook.promise(compilation).then(res => {
+  console.log('最终回调...',res)
+}, err => {
+
+})
+console.log('执行完成', compilation)
 
 
 /**
  * 执行时间比较，平均50倍的差距。。。。
  * **/
-const hook = new SyncLoopHook(['compilation'])
-const myHook = new MySyncLoopHook(['compilation'])
-const compilation = { sum: 0 }
-const myCompilation = { sum: 0}
-/**
- * 批量注册插件
- * **/
-for(let i = 0; i < 1000; i++){
-  hook.tap(`plugin${i}`, (compilation) => {
-    compilation.sum = compilation.sum + i
-  })
-
-  myHook.tap(`plugin${i}`, (compilation) => {
-    compilation.sum = compilation.sum + i
-  })
-}
-
-console.time('tapable')
-hook.call(compilation)
-console.timeEnd('tapable')
-
-console.time('my')
-myHook.call(myCompilation)
-console.timeEnd('my')
-
-console.log(compilation)
-console.log(myCompilation)
+// const hook = new SyncLoopHook(['compilation'])
+// const myHook = new MySyncLoopHook(['compilation'])
+// const compilation = { sum: 0 }
+// const myCompilation = { sum: 0}
+// /**
+//  * 批量注册插件
+//  * **/
+// for(let i = 0; i < 1000; i++){
+//   hook.tap(`plugin${i}`, (compilation) => {
+//     compilation.sum = compilation.sum + i
+//   })
+//
+//   myHook.tap(`plugin${i}`, (compilation) => {
+//     compilation.sum = compilation.sum + i
+//   })
+// }
+//
+// console.time('tapable')
+// hook.call(compilation)
+// console.timeEnd('tapable')
+//
+// console.time('my')
+// myHook.call(myCompilation)
+// console.timeEnd('my')
+//
+// console.log(compilation)
+// console.log(myCompilation)

@@ -74,6 +74,9 @@ register拦截器。
 #### tapable分类
 tapable hook 类型可以分为 `SyncHook(同步钩子)`、`AsyncHook(异步钩子)`，异步又分为 `并行` 和 `串行`。
 
+- 同步钩子，名字以`Sync`开头的，只能通过hook.tap注册插件。但是都可以通过hook.call，hook.callAsync以及hook.promise触发插件执行
+
+
 - Basic。目前Basic类型的Hook只有SyncHook。这种Hook的特点是不关心插件回调函数的返回值，并且串行执行插件回调函数。
 - Bail。名字带有Bail的都是保险式Hook，允许中断插件回调函数的执行，只要插件监听函数中有返回值(不为undefined)，则不执行后面的插件回调函数
 - Waterfall。名字带有Waterfall的都是瀑布式Hook，串行执行，这种Hook的特点是，上一个插件回调函数的返回值会传递给下一个插件回调函数的参数
