@@ -1176,3 +1176,66 @@ testhook.promise(compilation, 'name').then(res => {
 console.log('最后的语句', compilation)
 
 ```
+
+##### AsyncSeriesWaterfallHook
+- 异步串行瀑布式钩子。返回值或者参数会往下一个插件传递
+- 使用tap注册的插件，如果有返回值，则将返回值往下传。如果没有返回值，则将参数往下传
+- 使用tapPromise注册的插件，如果resolve(value)，value不是undefined，则将value往下传。如果value为undefined，则将参数往下传。reject用于报告错误，退出插件执行
+- 使用tapAsync注册的插件，如果调用cb(err, result)，err不是undefined，则退出插件执行，报告错误。如果err为undefined，则将result或者参数往下传
+- 使用callAsync(...args, (err, result) => {})触发插件执行时，err用于接收插件报告的错误，result用于接收插件传递的值
+- 使用promise(...args).then(res => {}, err => {})触发插件执行时，res用于接收插件传递的值，err用于接收插件报告的错误
+
+用法：
+```javascript
+const testhook = new AsyncSeriesWaterfallHook(['compilation', 'name'])
+
+
+testhook.tap('plugin1', (name, compilation) => {
+  console.log('plugin1', compilation, name)
+  compilation.sum = compilation.sum + 1
+  // const start = new Date().getTime();
+  // while(new Date().getTime() - start < 2000){}
+  // throw Error('plugin1抛出的error')
+  // return 'plugin1.result'; // 返回值有意义
+})
+
+testhook.tapPromise('plugin2', (name, compilation) => {
+  return new Promise((resolve, reject) => {
+    console.log('plugin2', compilation, name)
+    setTimeout(() => {
+      resolve();
+      // resolve('plugin2.result')
+      // reject('plugin2.error')
+      compilation.sum = compilation.sum + 1
+    }, 1000)
+  })
+})
+
+
+testhook.tapAsync('plugin3', (name, compilation,cb) => {
+  console.log('plugin3', compilation, name)
+  setTimeout(() => {
+    compilation.sum = compilation.sum + 4
+    cb();
+    // cb(null, 'plugin3.result')
+    // cb('plugin3.error', 'plugin3.result') // 第一个参数用来报告错误，第二个参数向下传递
+  }, 2000)
+})
+
+
+
+const compilation = { sum: 0 }
+// 第一种方式：通过hook.callAsync调用
+testhook.callAsync('Mike', compilation, function(err, result){ // 回调函数的参数用于接收错误信息
+    console.log('执行完成', compilation)
+    console.log('最终回调', err, result)
+})
+
+// 第二种方式：通过testhook.promise触发插件执行
+// testhook.promise('Mike', compilation).then(res => {
+//   console.log('最终回调', res) // res永远为undefined
+// }, err => {
+//   console.log('有错误了。。。', err)
+// })
+console.log('最后的语句', compilation)
+```
