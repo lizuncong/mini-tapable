@@ -1239,3 +1239,6 @@ testhook.callAsync('Mike', compilation, function(err, result){ // 回调函数�
 // })
 console.log('最后的语句', compilation)
 ```
+
+
+##### AsyncSeriesBailHook
