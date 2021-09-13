@@ -24,8 +24,78 @@ const { AsyncSeriesHook } = require('tapable')
  *
  * **/
 
+class MyAsyncSeriesHook{
+  constructor(argNames) {
+    this._argNames = argNames;
+    this.tasks = [];
+  }
+
+  tap(name, task){
+    this.tasks.push({
+      type: 'sync',
+      fn: task,
+      pluginName: name
+    })
+  }
+  tapPromise(name, task){
+    this.tasks.push({
+      type: 'promise',
+      fn: task,
+      pluginName: name
+    })
+  }
+  tapAsync(name, task){
+    this.tasks.push({
+      type: 'async',
+      fn: task,
+      pluginName: name
+    })
+  }
+
+  callAsync(...args){
+    const finalCallback = args.pop();
+    const next = (idx) => {
+      if(idx === this.tasks.length) {
+        finalCallback();
+        return;
+      }
+      const task = this.tasks[idx];
+      if(task.type === 'sync'){
+        task.fn(...args)
+        next(idx + 1)
+      }
+      if(task.type === 'async'){
+        const cb = (err) => {
+          if(err !== undefined) {
+            finalCallback(err);
+            return
+          }
+          next(idx+1)
+        }
+        task.fn(...args, cb)
+      }
+      if(task.type === 'promise'){
+        task.fn(...args).then(() => { next(idx+1)}, err => finalCallback(err))
+      }
+    }
+    next(0)
+  }
+  promise(...args){
+    return new Promise((resolve, reject) => {
+      const finalCallback = (err) => {
+        if(err){
+          reject(err)
+        } else {
+          resolve()
+        }
+      }
+      this.callAsync(...args, finalCallback)
+    })
+  }
+}
 
 const testhook = new AsyncSeriesHook(['compilation', 'name'])
+// const testhook = new MyAsyncSeriesHook(['compilation', 'name'])
 
 
 /**
@@ -45,7 +115,7 @@ testhook.tapPromise('plugin2', (compilation, name) => {
     console.log('plugin2', name)
     setTimeout(() => {
       console.log('plugin2状态改变')
-      resolve('success')
+      resolve('plugin2.success')
       // reject('plugin2.error') //如果调用的是reject，则不会继续走后面的插件，reject的值会被传递给hook.callAsync的回调函数
     }, 2000)
     compilation.sum = compilation.sum + 1
@@ -58,8 +128,8 @@ testhook.tapAsync('plugin3', (compilation, name,cb) => {
   compilation.sum = compilation.sum + 4
   setTimeout(() => {
     console.log('plugin3回调')
-    // cb();
-    cb('plugin3.error', 'plugin3.error2') // 只有第一个参数会传给最终的回调函数
+    cb();
+    // cb('plugin3.error', 'plugin3.error2') // 只有第一个参数会传给最终的回调函数
   }, 3000)
 })
 
@@ -67,14 +137,50 @@ testhook.tapAsync('plugin3', (compilation, name,cb) => {
 
 const compilation = { sum: 0 }
 // 第一种方式：通过hook.callAsync调用
-testhook.callAsync(compilation, 'mike', function(...args){
-  console.log('最终回调', args)
-})
+// testhook.callAsync(compilation, 'mike', function(...args){
+//   console.log('最终回调', args)
+// })
 
 // 第二种方式：通过testhook.promise触发插件执行
-// testhook.promise(compilation, 'name').then(res => {
-//   console.log('最终回调', res)
-// }, err => {
-//   console.log('有错误了。。。', err)
-// })
+testhook.promise(compilation, 'name').then(res => {
+  console.log('最终回调', res)
+}, err => {
+  console.log('有错误了。。。', err)
+})
 console.log('执行完成', compilation)
+
+
+/**
+ * 执行时间比较。。。。
+ * **/
+// const hook = new AsyncSeriesHook(['compilation', 'name'])
+// const myHook = new MyAsyncSeriesHook(['compilation', 'name'])
+// const compilation = { sum: 0, name: '' }
+// const myCompilation = { sum: 0, name: ''}
+// /**
+//  * 批量注册插件
+//  * **/
+// for(let i = 0; i < 1000; i++){
+//   hook.tapAsync(`plugin${i}`, (compilation, name, cb) => {
+//     compilation.sum = compilation.sum + i
+//     cb()
+//   })
+//
+//   myHook.tapAsync(`plugin${i}`, (compilation, name, cb) => {
+//     compilation.sum = compilation.sum + i
+//     cb()
+//   })
+// }
+//
+// console.time('tapable')
+// hook.callAsync(compilation, 'mike', () => {
+//   console.log(compilation)
+//   console.timeEnd('tapable')
+// })
+//
+// console.time('my')
+// myHook.callAsync(myCompilation, 'mike', () => {
+//   console.log(myCompilation)
+//   console.timeEnd('my')
+// })
+
