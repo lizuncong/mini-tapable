@@ -97,10 +97,6 @@ class MyAsyncSeriesHook{
 const testhook = new AsyncSeriesHook(['compilation', 'name'])
 // const testhook = new MyAsyncSeriesHook(['compilation', 'name'])
 
-
-/**
- *
- * **/
 testhook.tap('plugin1', (compilation, name) => {
   console.log('plugin1', name)
   compilation.sum = compilation.sum + 1

@@ -1,48 +1,47 @@
-function anonymous(compilation, name) {
-  "use strict";
-  var _context;
-  var _x = this._x;
-  return new Promise((function(_resolve, _reject) {
-    var _sync = true;
-    function _error(_err) {
-      if(_sync)
-        _resolve(Promise.resolve().then((function() { throw _err; })));
-      else
-        _reject(_err);
-    };
-    function _next1() {
-      var _fn2 = _x[2];
-      _fn2(compilation, name, (function(_err2) {
-        if(_err2) {
-          _error(_err2);
-        } else {
-          _resolve();
-        }
-      }));
-    }
-    var _fn0 = _x[0];
-    var _hasError0 = false;
-    try {
-      _fn0(compilation, name);
-    } catch(_err) {
-      _hasError0 = true;
-      _error(_err);
-    }
-    if(!_hasError0) {
-      var _fn1 = _x[1];
-      var _hasResult1 = false;
-      var _promise1 = _fn1(compilation, name);
-      if (!_promise1 || !_promise1.then)
-        throw new Error('Tap function (tapPromise) did not return promise (returned ' + _promise1 + ')');
-      _promise1.then((function(_result1) {
-        _hasResult1 = true;
-        _next1();
-      }), function(_err1) {
-        if(_hasResult1) throw _err1;
-        _error(_err1);
-      });
-    }
-    _sync = false;
-  }));
+const { SyncHook } = require('tapable')
+class MySyncHook{
+  constructor(argNames){
+    this.argNames = argNames;
+    this.tasks = []
+  }
 
+  tap(plugin, callback){
+    this.tasks.push(callback)
+  }
+
+  call(...args){
+    this.tasks.forEach(task => task(...args))
+  }
 }
+const hook = new SyncHook(['compilation'])
+const myHook = new MySyncHook(['compilation'])
+
+const compilation = { sum: 0 }
+const myCompilation = { sum: 0}
+
+for(let i = 0; i < 1000; i++){
+  hook.tap(`plugin${i}`, (compilation) => {
+    compilation.sum = compilation.sum + i
+  })
+
+  myHook.tap(`plugin${i}`, (compilation) => {
+    compilation.sum = compilation.sum + i
+  })
+}
+
+console.time('tapable')
+for(let i = 0; i < 10000; i++){
+  hook.call(compilation)
+}
+console.timeEnd('tapable')
+
+console.time('my')
+for(let i = 0; i < 10000; i++){
+  myHook.call(myCompilation)
+}
+console.timeEnd('my')
+
+this.task.push(cb);
+this.task.push(cb)
+
+console.log('eerr')
