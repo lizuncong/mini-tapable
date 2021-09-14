@@ -1392,3 +1392,6 @@ testhook.promise('Mike', compilation).then(res => {
 })
 console.log('最后的语句', compilation)
 ```
+
+
+

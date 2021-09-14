@@ -1,31 +1,43 @@
-class AsyncSeriesHook{
-  constructor(){
+const { SyncHook } = require('tapable')
+class MySyncHook{
+  constructor(argNames){
+    this.argNames = argNames;
     this.tasks = []
   }
-  tapAsync(task){
-    this.tasks.push(task)
+
+  tap(plugin, callback){
+    this.tasks.push(callback)
   }
-  callAsync(...args){}
+
+  call(...args){
+    this.tasks.forEach(task => task(...args))
+  }
+}
+const hook = new SyncHook(['compilation'])
+const myHook = new MySyncHook(['compilation'])
+
+const compilation = { sum: 0 }
+const myCompilation = { sum: 0}
+
+for(let i = 0; i < 1000; i++){
+  hook.tap(`plugin${i}`, (compilation) => {
+    compilation.sum = compilation.sum + i
+  })
+
+  myHook.tap(`plugin${i}`, (compilation) => {
+    compilation.sum = compilation.sum + i
+  })
 }
 
-const testhook = new AsyncSeriesHook()
+console.time('tapable')
+const count = 1700000;
+for(let i = 0; i < count; i++){
+  hook.call(compilation)
+}
+console.timeEnd('tapable')
 
-testhook.tapAsync((name, compilation, cb) => {
-  setTimeout(() => {
-    compilation.sum = compilation.sum + 1
-    cb() //  调用cb()才能执行下一个回调
-  }, 2000)
-})
-
-testhook.tapAsync((name, compilation, cb) => {
-  console.log( compilation, name)
-  setTimeout(() => {
-    compilation.sum = compilation.sum + 2
-    cb() //  调用cb()才能执行下一个回调
-  }, 3000)
-})
-const compilation = { sum: 0 }
-
-testhook.callAsync('Mike', compilation, function(){
-  console.log('所有插件执行完成', compilation)
-})
+console.time('my')
+for(let i = 0; i < count; i++){
+  myHook.call(myCompilation)
+}
+console.timeEnd('my')
