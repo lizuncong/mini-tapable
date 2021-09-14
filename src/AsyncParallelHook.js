@@ -41,11 +41,11 @@ class MyAsyncParallelHook{
         this.tasks.forEach(task => {
             const fn = task.fn;
             if(task.type === 'sync'){
+                fn(...args)
                 count++;
                 if(count === this.tasks.length){
                     finalCallback();
                 }
-                fn(...args)
             }
             if(task.type === 'promise'){
                 fn(...args).then(res => {
