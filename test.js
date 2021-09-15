@@ -1,17 +1,28 @@
 const { SyncHook } = require('tapable')
+const CALL_DELEGATE = function(...args){
+  this.call = this._createCall(); // The function is dynamically generated when it is called for the first time
+  return this.call(...args)
+}
 class MySyncHook{
   constructor(argNames){
     this.argNames = argNames;
     this.tasks = []
+    // this._call = CALL_DELEGATE;
+    this.call = CALL_DELEGATE;
   }
 
   tap(plugin, callback){
+    // This.call must be reset every time a new plugin is added
+    this.call = CALL_DELEGATE;
     this.tasks.push(callback)
   }
-
-  call(...args){
-    this.tasks.forEach(task => task(...args))
+  _createCall(){
+    const params = this.argNames.join(',');
+    return new Function(params, "this.tasks.forEach(task => task(" + params + "))")
   }
+  // call(...args){
+  //   this.tasks.forEach(task => task(...args))
+  // }
 }
 const hook = new SyncHook(['compilation'])
 const myHook = new MySyncHook(['compilation'])
@@ -20,17 +31,17 @@ const compilation = { sum: 0 }
 const myCompilation = { sum: 0}
 
 for(let i = 0; i < 1000; i++){
-  hook.tap(`plugin${i}`, (compilation) => {
+  hook.tap("plugin" + i, (compilation) => {
     compilation.sum = compilation.sum + i
   })
 
-  myHook.tap(`plugin${i}`, (compilation) => {
+  myHook.tap("plugin" + i, (compilation) => {
     compilation.sum = compilation.sum + i
   })
 }
+const count = 20;
 
 console.time('tapable')
-const count = 1700000;
 for(let i = 0; i < count; i++){
   hook.call(compilation)
 }
