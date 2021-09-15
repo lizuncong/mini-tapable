@@ -20,9 +20,9 @@ class MySyncHook{
     const params = this.argNames.join(',');
     return new Function(params, "this.tasks.forEach(task => task(" + params + "))")
   }
-  // call(...args){
-  //   this.tasks.forEach(task => task(...args))
-  // }
+  callDirectly(...args){
+    this.tasks.forEach(task => task(...args))
+  }
 }
 const hook = new SyncHook(['compilation'])
 const myHook = new MySyncHook(['compilation'])
@@ -39,7 +39,7 @@ for(let i = 0; i < 1000; i++){
     compilation.sum = compilation.sum + i
   })
 }
-const count = 20;
+const count = 2000;
 
 console.time('tapable')
 for(let i = 0; i < count; i++){
@@ -52,3 +52,10 @@ for(let i = 0; i < count; i++){
   myHook.call(myCompilation)
 }
 console.timeEnd('my')
+
+
+console.time('my-call')
+for(let i = 0; i < count; i++){
+  myHook.callDirectly(myCompilation)
+}
+console.timeEnd('my-call')
