@@ -2,7 +2,7 @@
 webpack插件机制的核心。小而美又强的一个库。核心原理也是依赖于发布订阅模式。在开始前可以思考一下以下几个问题：
 - 一道高频面试题：loader和plugin的区别(可以从概念，执行时机，源码层面区分)。如何实现loader，如何实现plugin。
 - new Function是做什么。let argNames=[“a”,"b",“c”]，new Function(argNames.join(“,”),"函数体")
-- 单态性及多态性概念
+- [单态性及多态性概念](https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphism.html)
 - 下面哪种函数执行效率更高?哪种函数更易拓展
 - 发布订阅模式是什么?如何实现一个简单的事件监听，触发及取消。
 - tapable的用法精讲及设计思想
