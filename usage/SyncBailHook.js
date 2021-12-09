@@ -10,7 +10,7 @@ hook.tap('plugin2', (compilation) => {
   console.log('plugin2')
   // throw Error('plugin2 抛出错误..')
   compilation.sum = compilation.sum + 2
-  return 'haha'; // 除了返回undefined以外，任何值都会中断插件继续往后执行
+  // return 'haha'; // 除了返回undefined以外，任何值都会中断插件继续往后执行
 })
 
 hook.tap('plugin3', (compilation) => {

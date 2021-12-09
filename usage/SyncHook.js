@@ -1,6 +1,6 @@
 const { SyncHook } = require('tapable')
 
-const testhook = new SyncHook(['compilation'])
+const testhook = new SyncHook(['compilation', 'name'])
 testhook.tap('plugin1', (compilation, name) => {
   console.log('plugin1', name)
   compilation.sum = compilation.sum + 1
@@ -28,7 +28,7 @@ const compilation = { sum: 0 }
 //   console.log('最终回调完成..', ...args)
 // })
 // 第三种触发方式：通过promise
-testhook.promise(compilation).then(res => {
+testhook.promise(compilation, 'mike').then(res => {
     console.log('最终回调...',res)
   }, err => {
     console.log('出错了。。。', err)

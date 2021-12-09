@@ -2,13 +2,13 @@ const { SyncWaterfallHook } = require('tapable')
 
 const testhook = new SyncWaterfallHook(['compilation', 'name'])
 testhook.tap('plugin1', (compilation, name) => {
-  console.log('plugin1', name)
+  console.log('plugin1', compilation, name)
   compilation.sum = compilation.sum + 1
   return compilation
 })
 
 testhook.tap('plugin2', (compilation, name) => {
-  console.log('plugin2..',name)
+  console.log('plugin2..', compilation,name)
   compilation.sum = compilation.sum + 2
   // throw Error('plugin2抛出一个错误')
   // return undefined // 如果返回undefined，那么会将plugin1的返回值传递给plugin3的参数

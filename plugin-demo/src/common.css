@@ -1,0 +1,25 @@
+div {
+    height: 200px;
+    color: red;
+    overflow: hidden;
+    background-color: aqua;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 480px) {
+    .world {
+        background-color: lightgreen;
+    }
+    .world {
+        color: green;
+    }
+}
+
+@media (max-width: 960px) {
+    .hello {
+        background-color: aliceblue;
+        color: blue;
+    }
+}
+
+

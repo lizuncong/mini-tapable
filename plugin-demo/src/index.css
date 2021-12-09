@@ -1,0 +1,21 @@
+@import './common.css';
+
+.container{
+    color: red;
+    background-color: green;
+}
+
+body{
+    color: blue;
+    background: url('./2.png') no-repeat;
+}
+
+
+
+/* 小于960px时生效 */
+@media (max-width: 960px) {
+    .container{
+        color: red;
+        background-color: blue;
+    }
+}
